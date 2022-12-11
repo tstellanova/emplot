@@ -1,0 +1,11 @@
+[package]
+name = "emplot"
+version = "0.1.0"
+edition = "2021"
+authors = ["Todd Stellanova <tstellanova@users-noreply.github.com>"]
+license = "BSD-3"
+description = "Simple series plots for rust embedded-graphics"
+
+[dependencies]
+embedded-graphics = "0.7"
+ringbuffer = {version="0.10.0",  default-features = false }

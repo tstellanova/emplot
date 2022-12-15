@@ -8,4 +8,5 @@ description = "Simple series plots for rust embedded-graphics"
 
 [dependencies]
 embedded-graphics = "0.7"
+time-series-filter = "0.1.0"
 ringbuffer = {version="0.10.0",  default-features = false }

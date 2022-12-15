@@ -27,6 +27,7 @@ pub struct Emplot<C, const N: usize>
     /// cached maximum pixel height for the plot line
     max_pixel_height: u32,
  
+    /// used to track a fading max and min
     iir_filter: FloatSeriesEwmaFilter<f32>,
 
 }
@@ -90,22 +91,10 @@ impl<C, const N: usize> Drawable for Emplot<C, N>
             }
             else {0};
 
-        /*
-        // find the minimum and maximum samples in the entire sample buffer
-        let (min, max): (&f32, &f32) =
-            self.samples.iter()
-                .fold((&f32::MAX, &f32::MIN), |mut acc, val| {
-                    if val < acc.0 { acc.0 = val; }
-                    if val > acc.1 { acc.1 = val; }
-                    acc
-                });
-        */
-
         // use exponential weighted moving average for recent min/max
         let range = self.iir_filter.local_range();
         let display_min = range.start;
 	let display_max = range.end;
-
 
         // recalculate slope based on min and max
         if display_max != display_min {
@@ -168,6 +157,5 @@ mod tests {
 
         for i in 3..(2*MAX_DRAW_ITEMS) { emplot.push(i as f32);}
         assert_eq!(emplot.num_draw_items(), MAX_DRAW_ITEMS);
-
     }
 }

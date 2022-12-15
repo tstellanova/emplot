@@ -6,6 +6,9 @@ use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWr
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 
+use time_series_filter::{EwmaFilter, FloatSeriesEwmaFilter };
+
+
 pub struct Emplot<C, const N: usize>
     where
         C: PixelColor,
@@ -23,6 +26,9 @@ pub struct Emplot<C, const N: usize>
 
     /// cached maximum pixel height for the plot line
     max_pixel_height: u32,
+ 
+    iir_filter: FloatSeriesEwmaFilter<f32>,
+
 }
 
 impl<C, const N: usize> Emplot<C, N>
@@ -43,12 +49,14 @@ impl<C, const N: usize> Emplot<C, N>
             line_color,
             line_stroke_w: line_stroke_width,
             max_pixel_height: (bounds.top_left.y + bounds.size.height as i32) as u32,
+            iir_filter: FloatSeriesEwmaFilter::default(),
         }
     }
 
     /// Push a new sample value to the sample buffer
     pub fn push(&mut self, val: f32) {
         self.samples.push(val);
+        self.iir_filter.push_sample(val);
     }
 
     /// The number of samples we will attempt to draw, currently
@@ -82,6 +90,7 @@ impl<C, const N: usize> Drawable for Emplot<C, N>
             }
             else {0};
 
+        /*
         // find the minimum and maximum samples in the entire sample buffer
         let (min, max): (&f32, &f32) =
             self.samples.iter()
@@ -90,10 +99,17 @@ impl<C, const N: usize> Drawable for Emplot<C, N>
                     if val > acc.1 { acc.1 = val; }
                     acc
                 });
+        */
+
+        // use exponential weighted moving average for recent min/max
+        let range = self.iir_filter.local_range();
+        let display_min = range.start;
+	let display_max = range.end;
+
 
         // recalculate slope based on min and max
-        if max != min {
-            slope /= max - min;
+        if display_max != display_min {
+            slope /= display_max - display_min;
         }
 
         // the samples len may be shorter than n_draw_samples, initially
@@ -106,7 +122,7 @@ impl<C, const N: usize> Drawable for Emplot<C, N>
             let idx_offset = if i > start_idx { i - start_idx } else { 0 };
             let scaled_val =
                 self.max_pixel_height as f32
-                - ((val - min) as f32 * slope)
+                - ((val - display_min) as f32 * slope)
                 - self.line_stroke_w as f32 / 2f32;
 
             let pt_x = (idx_offset as f32 * px_per_seg) as i32 + self.bounds.top_left.x;
